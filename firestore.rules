@@ -1,0 +1,85 @@
+rules_version = '2'
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function existing() { return resource.data; }
+    function incoming() { return request.resource.data; }
+    
+    // Admin check: Requires a read from the users collection
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['customer', 'phone', 'date', 'nights', 'total', 'status', 'userId', 'createdAt']) &&
+             data.keys().size() <= 10 &&
+             data.customer is string && data.customer.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.date is string && data.date.size() == 10 &&
+             data.nights is number && data.nights > 0 &&
+             data.total is number && data.total >= 0 &&
+             data.status in ['Confirmed', 'Cancelled', 'Pending'] &&
+             data.userId == request.auth.uid &&
+             data.createdAt is string; // Simplified for this draft, usually request.time
+    }
+
+    function isValidPriceSettings(data) {
+      return data.keys().hasAny(['standardPrices', 'customPrices', 'updatedAt']) &&
+             (data.standardPrices == null || data.standardPrices is map) &&
+             (data.customPrices == null || data.customPrices is map);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.role in ['admin', 'user'];
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().role == 'user' || 
+        (incoming().role == 'admin' && (incoming().email == 'kddmilkchoco@gmail.com' || incoming().email == 'vcaykw@gmail.com'))
+      );
+      allow update: if (isAdmin() || (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'uid', 'createdAt'])));
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      // List query enforcement
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      allow create: if isSignedIn() && isValidBooking(incoming()) && isValidId(bookingId);
+      allow update: if isAdmin(); // Only admin can update status or details after creation
+      allow delete: if isAdmin();
+    }
+
+    match /settings/prices {
+      allow get: if true; // Everyone can get specific prices to calculate before booking
+      allow write: if isAdmin() && isValidPriceSettings(incoming());
+    }
+
+    match /otps/{email} {
+      allow read, write: if false; // Only server (Admin SDK) can access
+    }
+  }
+}

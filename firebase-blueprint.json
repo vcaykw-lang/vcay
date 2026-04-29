@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "A rental booking for the beach house",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customer": { "type": "string" },
+        "phone": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "nights": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Confirmed", "Cancelled", "Pending"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customer", "phone", "date", "nights", "total", "status", "userId", "createdAt"]
+    },
+    "PriceSettings": {
+      "title": "Price Settings",
+      "description": "Global pricing configurations",
+      "type": "object",
+      "properties": {
+        "standardPrices": {
+          "type": "object",
+          "description": "Standard prices per day of week (0-6)"
+        },
+        "customPrices": {
+          "type": "object",
+          "description": "Overridden prices for specific dates"
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "phone": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Otp": {
+      "title": "OTP",
+      "description": "6-digit verification code for Guest login",
+      "type": "object",
+      "properties": {
+        "otp": { "type": "string" },
+        "expiresAt": { "type": "number" },
+        "createdAt": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/otps/{email}": {
+      "schema": "Otp",
+      "description": "Short-lived verification codes"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "All customer bookings"
+    },
+    "/settings/prices": {
+      "schema": "PriceSettings",
+      "description": "Global pricing settings managed by admin"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User data and roles"
+    }
+  }
+}

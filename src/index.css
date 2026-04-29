@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-gray-900 bg-white;
+  }
+}
+
+[dir="rtl"] {
+  font-family: "Tajawal", "Inter", sans-serif;
+}
+
+.bg-brand-brown {
+  background-color: #695247;
+}
+
+.text-brand-brown {
+  color: #695247;
+}
+
+.border-brand-brown {
+  border-color: #695247;
+}
+
+.bg-brand-pink {
+  background-color: #F6D1EE;
+}
+
+.text-brand-pink {
+  color: #F6D1EE;
+}
+
+.bg-brand-soft {
+  background-color: #FFF5FB;
+}
+
+.accent-brand {
+    @apply border-[#695247] text-[#695247];
+}
